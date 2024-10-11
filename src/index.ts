@@ -71,7 +71,8 @@ export default {
 
 			return new Response(JSON.stringify({ "event_date": eventDate }), {
 				headers: {
-					"content-type": "application/json",
+					"Content-Type": "application/json",
+					"Cache-Control": "public, max-age=86400",
 					...corsHeaders,
 				},
 			});
