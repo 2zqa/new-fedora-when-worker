@@ -8,6 +8,7 @@
 export default {
 	async fetch(request, env, ctx): Promise<Response> {
 		const corsHeaders = {
+			// TODO: allow localhost:8000, 0.0.0.0:8000, and 2zqa.github.io
 			"Access-Control-Allow-Origin": "*",
 			"Access-Control-Allow-Methods": "GET,OPTIONS",
 			"Access-Control-Max-Age": "86400",
