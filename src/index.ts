@@ -13,8 +13,6 @@ export default {
 			"Access-Control-Allow-Methods": "GET,OPTIONS",
 			"Access-Control-Max-Age": "86400",
 		};
-		const DEFAULT_VERSION = "f-41";
-
 
 		/**
 		 * Finds the start date from the first ical event with the given summary.
