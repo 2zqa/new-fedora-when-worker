@@ -24,7 +24,6 @@ export default {
 				if (line.startsWith(`SUMMARY:${summary}`)) {
 					const nextLine = lines[i + 1];
 					if (nextLine.startsWith('DTSTART:')) {
-						console.log(`Found event date: ${nextLine}`);
 						const dtstart = nextLine.substring('DTSTART:'.length).trim();
 						return parseDateFromICSDate(dtstart);
 					}
@@ -58,7 +57,7 @@ export default {
 				return new Response(null, { status: 204 });
 			}
 
-			return new Response(JSON.stringify({ eventDate }), {
+			return new Response(JSON.stringify({ "event_date": eventDate }), {
 				headers: {
 					"content-type": "application/json",
 					...corsHeaders,
