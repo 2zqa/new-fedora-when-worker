@@ -58,6 +58,10 @@ export default {
 
 		async function handleRequest(request: Request) {
 			const version = getVersionFromRequest(request);
+			if (version === null) {
+				console.log("Invalid version parameter");
+				return new Response(JSON.stringify({ "error": "Invalid version parameter. Allowed values: f-39, f-40, f-41, f-42, f-43" }), { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } });
+			}
 			const response = await fetch(`https://fedorapeople.org/groups/schedule/${version}/${version}-key.ics`);
 			const icalData = await response.text();
 			const eventDate = findEventDate(icalData, "Current Final Target date");
@@ -75,10 +79,13 @@ export default {
 
 		function getVersionFromRequest(request: Request): string | null {
 			const url = new URL(request.url);
-			let version = url.searchParams.get("version") ?? DEFAULT_VERSION;
-			const validVersions = ["f-39", "f-40", "f-41", "f-42", "f-43"];
-			if (!validVersions.includes(version)) {
-				version = DEFAULT_VERSION;
+			let version = url.searchParams.get("version");
+			if (version === null) {
+				return null;
+			}
+			const allowedVersions = new Set(["f-39", "f-40", "f-41", "f-42", "f-43"]);
+			if (!allowedVersions.has(version)) {
+				return null;
 			}
 			return version;
 		}
