@@ -90,26 +90,7 @@ export default {
 			return version;
 		}
 
-		function handleOptions(request: Request): Response {
-			if (
-				request.headers.get("Origin") !== null &&
-				request.headers.get("Access-Control-Request-Method") !== null &&
-				request.headers.get("Access-Control-Request-Headers") !== null
-			) {
-				// Handle CORS preflight requests.
-				return new Response(null, { headers: corsHeaders });
-			} else {
-				// Handle standard OPTIONS request.
-				return new Response(null, {
-					headers: { Allow: "GET, OPTIONS" },
-				});
-			}
-		}
-
-		if (request.method === "OPTIONS") {
-			// Handle CORS preflight requests
-			return handleOptions(request);
-		} else if (request.method === "GET") {
+		if (request.method === "GET") {
 			// Handle requests to the API server
 			return handleRequest(request);
 		} else {
