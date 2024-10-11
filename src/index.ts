@@ -6,7 +6,7 @@
  * Learn more at https://developers.cloudflare.com/workers/
  */
 export default {
-	async fetch(request, env, ctx): Promise<Response> {
+	async fetch(request, _, ctx): Promise<Response> {
 		function getCorsHeaders(origin: string): Record<string, string> {
 			const allowedOrigins = [
 				"https://2zqa.github.io",
@@ -69,20 +69,31 @@ export default {
 			if (version === null) {
 				return new Response(JSON.stringify({ "error": "Invalid version parameter. Allowed values: f-39, f-40, f-41, f-42, f-43" }), { status: 400, headers: { "Content-Type": "application/json", ...getCorsHeaders(origin) } });
 			}
-			const response = await fetch(`https://fedorapeople.org/groups/schedule/${version}/${version}-key.ics`);
-			const icalData = await response.text();
-			const eventDate = findEventDate(icalData, "Current Final Target date");
-			if (eventDate === null) {
-				return new Response(null, { status: 204 });
+
+			const cacheKey = new Request(request.url, request);
+			const cache = caches.default;
+			let response = await cache.match(cacheKey);
+
+			if (!response) {
+				const fetchResponse = await fetch(`https://fedorapeople.org/groups/schedule/${version}/${version}-key.ics`);
+				const icalData = await fetchResponse.text();
+				const eventDate = findEventDate(icalData, "Current Final Target date");
+				if (eventDate === null) {
+					return new Response(null, { status: 204 });
+				}
+
+				response = new Response(JSON.stringify({ "event_date": eventDate }), {
+					headers: {
+						"Content-Type": "application/json",
+						"Cache-Control": "public, max-age=86400",
+						...getCorsHeaders(origin),
+					},
+				});
+
+				ctx.waitUntil(cache.put(cacheKey, response.clone()));
 			}
 
-			return new Response(JSON.stringify({ "event_date": eventDate }), {
-				headers: {
-					"Content-Type": "application/json",
-					"Cache-Control": "public, max-age=86400",
-					...getCorsHeaders(origin),
-				},
-			});
+			return response;
 		}
 
 		function getVersionFromRequest(request: Request): string | null {
@@ -99,7 +110,6 @@ export default {
 		}
 
 		if (request.method === "GET") {
-			// Handle requests to the API server
 			return handleRequest(request);
 		} else {
 			return new Response(null, { status: 405 });
