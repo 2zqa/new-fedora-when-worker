@@ -7,12 +7,21 @@
  */
 export default {
 	async fetch(request, env, ctx): Promise<Response> {
-		const corsHeaders = {
-			// TODO: allow localhost:8000, 0.0.0.0:8000, and 2zqa.github.io
-			"Access-Control-Allow-Origin": "*",
-			"Access-Control-Allow-Methods": "GET,OPTIONS",
-			"Access-Control-Max-Age": "86400",
-		};
+		function getCorsHeaders(origin: string): Record<string, string> {
+			const allowedOrigins = [
+				"https://2zqa.github.io",
+				"http://localhost:8000",
+				"http://0.0.0.0:8000",
+				"http://127.0.0.1:8000"
+			];
+			const originToUse = allowedOrigins.includes(origin) ? origin : allowedOrigins[0];
+
+			return {
+				"Access-Control-Allow-Origin": originToUse,
+				"Access-Control-Allow-Methods": "GET,OPTIONS",
+				"Access-Control-Max-Age": "86400",
+			};
+		}
 
 		/**
 		 * Finds the start date from the first ical event with the given summary.
@@ -56,8 +65,9 @@ export default {
 
 		async function handleRequest(request: Request) {
 			const version = getVersionFromRequest(request);
+			const origin = request.headers.get("Origin") || "";
 			if (version === null) {
-				return new Response(JSON.stringify({ "error": "Invalid version parameter. Allowed values: f-39, f-40, f-41, f-42, f-43" }), { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } });
+				return new Response(JSON.stringify({ "error": "Invalid version parameter. Allowed values: f-39, f-40, f-41, f-42, f-43" }), { status: 400, headers: { "Content-Type": "application/json", ...getCorsHeaders(origin) } });
 			}
 			const response = await fetch(`https://fedorapeople.org/groups/schedule/${version}/${version}-key.ics`);
 			const icalData = await response.text();
@@ -70,7 +80,7 @@ export default {
 				headers: {
 					"Content-Type": "application/json",
 					"Cache-Control": "public, max-age=86400",
-					...corsHeaders,
+					...getCorsHeaders(origin),
 				},
 			});
 		}
