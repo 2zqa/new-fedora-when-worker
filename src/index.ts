@@ -59,7 +59,6 @@ export default {
 		async function handleRequest(request: Request) {
 			const version = getVersionFromRequest(request);
 			if (version === null) {
-				console.log("Invalid version parameter");
 				return new Response(JSON.stringify({ "error": "Invalid version parameter. Allowed values: f-39, f-40, f-41, f-42, f-43" }), { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } });
 			}
 			const response = await fetch(`https://fedorapeople.org/groups/schedule/${version}/${version}-key.ics`);
