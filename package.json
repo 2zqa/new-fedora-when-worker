@@ -1,5 +1,5 @@
 {
-  "name": "new-fedora-when",
+  "name": "new-fedora-when-worker",
   "version": "0.0.0",
   "private": true,
   "scripts": {

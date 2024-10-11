@@ -1,52 +1,79 @@
 /**
- * Welcome to Cloudflare Workers! This is your first worker.
- *
  * - Run `npm run dev` in your terminal to start a development server
  * - Open a browser tab at http://localhost:8787/ to see your worker in action
  * - Run `npm run deploy` to publish your worker
  *
- * Bind resources to your worker in `wrangler.toml`. After adding bindings, a type definition for the
- * `Env` object can be regenerated with `npm run cf-typegen`.
- *
  * Learn more at https://developers.cloudflare.com/workers/
  */
-
 export default {
 	async fetch(request, env, ctx): Promise<Response> {
 		const corsHeaders = {
 			"Access-Control-Allow-Origin": "*",
-			"Access-Control-Allow-Methods": "GET,HEAD,POST,OPTIONS",
+			"Access-Control-Allow-Methods": "GET,OPTIONS",
 			"Access-Control-Max-Age": "86400",
 		};
-
 		const DEFAULT_VERSION = "f-41";
 
+
+		function findEventDate(icsData: string, summary: string): Date | null {
+			// Split the content by lines
+			const lines = icsData.split(/\r?\n/);
+
+			for (let i = 0; i < lines.length; i++) {
+				const line = lines[i];
+				if (line.startsWith(`SUMMARY:${summary}`)) {
+					const nextLine = lines[i + 1];
+					if (nextLine.startsWith('DTSTART:')) {
+						console.log(`Found event date: ${nextLine}`);
+						const dtstart = nextLine.substring('DTSTART:'.length).trim();
+						return parseDateFromICSDate(dtstart);
+					}
+				}
+			}
+			return null;
+		}
+
+		/**
+		 * Parses a date string in the format `YYYYMMDDTHHmmssZ` and returns a JavaScript `Date` object.
+		 *
+		 * @param dtstart - The date string in the format `YYYYMMDDTHHmmssZ`.
+		 * @returns A `Date` object representing the parsed date and time in UTC.
+		 */
+		function parseDateFromICSDate(dtstart: string) {
+			const year = parseInt(dtstart.substring(0, 4), 10);
+			const month = parseInt(dtstart.substring(4, 6), 10) - 1; // Months are 0-based in JavaScript Date
+			const day = parseInt(dtstart.substring(6, 8), 10);
+			const hour = parseInt(dtstart.substring(9, 11), 10);
+			const minute = parseInt(dtstart.substring(11, 13), 10);
+			const second = parseInt(dtstart.substring(13, 15), 10);
+			return new Date(Date.UTC(year, month, day, hour, minute, second));
+		}
+
 		async function handleRequest(request: Request) {
+			const version = getVersionFromRequest(request);
+			const response = await fetch(`https://fedorapeople.org/groups/schedule/${version}/${version}-key.ics`);
+			const icsData = await response.text();
+			const eventDate = findEventDate(icsData, "Current Final Target date");
+			if (eventDate === null) {
+				return new Response(null, { status: 204 });
+			}
+
+			return new Response(JSON.stringify({ eventDate }), {
+				headers: {
+					"content-type": "application/json",
+					...corsHeaders,
+				},
+			});
+		}
+
+		function getVersionFromRequest(request: Request<unknown, CfProperties<unknown>>) {
 			const url = new URL(request.url);
 			let version = url.searchParams.get("version") ?? DEFAULT_VERSION;
 			const validVersions = ["f-39", "f-40", "f-41", "f-42", "f-43"];
 			if (!validVersions.includes(version)) {
 				version = DEFAULT_VERSION;
 			}
-			const apiUrl = `https://fedorapeople.org/groups/schedule/${version}/${version}-key.ics`;
-
-
-			// Rewrite request to point to API URL. This also makes the request mutable
-			// so you can add the correct Origin header to make the API server think
-			// that this request is not cross-site.
-			request = new Request(apiUrl, request);
-			request.headers.set("Origin", new URL(apiUrl).origin);
-			let response = await fetch(request);
-
-			// Recreate the response so you can modify the headers
-			response = new Response(response.body, response);
-
-			// Set CORS headers
-			response.headers.set("Access-Control-Allow-Origin", url.origin);
-			// Append to/Add Vary header so browser will cache response correctly
-			response.headers.append("Vary", "Origin");
-
-			return response;
+			return version;
 		}
 
 		async function handleOptions(request: Request) {
@@ -56,20 +83,11 @@ export default {
 				request.headers.get("Access-Control-Request-Headers") !== null
 			) {
 				// Handle CORS preflight requests.
-				return new Response(null, {
-					headers: {
-						...corsHeaders,
-						"Access-Control-Allow-Headers": request.headers.get(
-							"Access-Control-Request-Headers",
-						),
-					},
-				});
+				return new Response(null, { headers: corsHeaders });
 			} else {
 				// Handle standard OPTIONS request.
 				return new Response(null, {
-					headers: {
-						Allow: "GET, HEAD, POST, OPTIONS",
-					},
+					headers: { Allow: "GET, OPTIONS" },
 				});
 			}
 		}
