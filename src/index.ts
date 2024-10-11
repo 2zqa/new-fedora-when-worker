@@ -16,9 +16,16 @@ export default {
 		const DEFAULT_VERSION = "f-41";
 
 
-		function findEventDate(icsData: string, summary: string): Date | null {
+		/**
+		 * Finds the start date from the first ical event with the given summary.
+		 *
+		 * @param icalData - The ical data as a string.
+		 * @param summary - The exact summary of the event to find.
+		 * @returns The start date of the event if found, otherwise null.
+		 */
+		function findEventDate(icalData: string, summary: string): Date | null {
 			// Split the content by lines
-			const lines = icsData.split(/\r?\n/);
+			const lines = icalData.split(/\r?\n/);
 
 			for (let i = 0; i < lines.length; i++) {
 				const line = lines[i];
@@ -26,7 +33,7 @@ export default {
 					const nextLine = lines[i + 1];
 					if (nextLine.startsWith('DTSTART:')) {
 						const dtstart = nextLine.substring('DTSTART:'.length).trim();
-						return parseDateFromICSDate(dtstart);
+						return parseDateFromIcalDate(dtstart);
 					}
 				}
 			}
@@ -39,7 +46,7 @@ export default {
 		 * @param dtstart - The date string in the format `YYYYMMDDTHHmmssZ`.
 		 * @returns A `Date` object representing the parsed date and time in UTC.
 		 */
-		function parseDateFromICSDate(dtstart: string) {
+		function parseDateFromIcalDate(dtstart: string) {
 			const year = parseInt(dtstart.substring(0, 4), 10);
 			const month = parseInt(dtstart.substring(4, 6), 10) - 1; // Months are 0-based in JavaScript Date
 			const day = parseInt(dtstart.substring(6, 8), 10);
@@ -52,8 +59,8 @@ export default {
 		async function handleRequest(request: Request) {
 			const version = getVersionFromRequest(request);
 			const response = await fetch(`https://fedorapeople.org/groups/schedule/${version}/${version}-key.ics`);
-			const icsData = await response.text();
-			const eventDate = findEventDate(icsData, "Current Final Target date");
+			const icalData = await response.text();
+			const eventDate = findEventDate(icalData, "Current Final Target date");
 			if (eventDate === null) {
 				return new Response(null, { status: 204 });
 			}
@@ -66,7 +73,7 @@ export default {
 			});
 		}
 
-		function getVersionFromRequest(request: Request<unknown, CfProperties<unknown>>) {
+		function getVersionFromRequest(request: Request): string | null {
 			const url = new URL(request.url);
 			let version = url.searchParams.get("version") ?? DEFAULT_VERSION;
 			const validVersions = ["f-39", "f-40", "f-41", "f-42", "f-43"];
@@ -76,7 +83,7 @@ export default {
 			return version;
 		}
 
-		async function handleOptions(request: Request) {
+		function handleOptions(request: Request): Response {
 			if (
 				request.headers.get("Origin") !== null &&
 				request.headers.get("Access-Control-Request-Method") !== null &&
@@ -99,10 +106,7 @@ export default {
 			// Handle requests to the API server
 			return handleRequest(request);
 		} else {
-			return new Response(null, {
-				status: 405,
-				statusText: "Method Not Allowed",
-			});
+			return new Response(null, { status: 405 });
 		}
 	},
 } satisfies ExportedHandler<Env>;
