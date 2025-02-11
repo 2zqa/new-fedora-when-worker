@@ -12,4 +12,4 @@ A Cloudflare Worker that returns the planned release date of Fedora releases. Se
 
 ## License
 
-Mediary is licensed under the [MIT](LICENSE) license.
+This project is licensed under the [MIT](LICENSE) license.
