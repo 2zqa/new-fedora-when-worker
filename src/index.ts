@@ -67,7 +67,7 @@ export default {
 			const version = getVersionFromRequest(request);
 			const origin = request.headers.get("Origin") || "";
 			if (version === null) {
-				return new Response(JSON.stringify({ "error": "Invalid version parameter. Allowed values: f-39, f-40, f-41, f-42, f-43" }), { status: 400, headers: { "Content-Type": "application/json", ...getCorsHeaders(origin) } });
+				return new Response(JSON.stringify({ "error": "Invalid version parameter. Allowed values: f-42, f-43, f-44, f-45" }), { status: 400, headers: { "Content-Type": "application/json", ...getCorsHeaders(origin) } });
 			}
 			const response = await fetch(`https://fedorapeople.org/groups/schedule/${version}/${version}-key.ics`);
 			const icalData = await response.text();
@@ -91,7 +91,7 @@ export default {
 			if (version === null) {
 				return null;
 			}
-			const allowedVersions = new Set(["f-39", "f-40", "f-41", "f-42", "f-43"]);
+			const allowedVersions = new Set(["f-42", "f-43", "f-44", "f-45"]);
 			if (!allowedVersions.has(version)) {
 				return null;
 			}
